@@ -1,5 +1,5 @@
 using DigitalCoach.Application.Abstractions.Repositories;
-using DigitalCoach.Infrastructure.Persistence;
+using DigitalCoach.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 
 namespace DigitalCoach.Infrastructure.Repositories;

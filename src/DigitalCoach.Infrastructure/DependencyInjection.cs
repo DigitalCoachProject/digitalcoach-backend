@@ -1,6 +1,6 @@
 using DigitalCoach.Application.Abstractions.Repositories;
 using DigitalCoach.Application.Abstractions.Services;
-using DigitalCoach.Infrastructure.Persistence;
+using DigitalCoach.Infrastructure.Persistence.Context;
 using DigitalCoach.Infrastructure.Repositories;
 using DigitalCoach.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -15,8 +15,15 @@ public static class DependencyInjection
     {
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
+
         services.AddDbContext<DigitalCoachDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(connectionString, sqlServer =>
+            {
+                sqlServer.MigrationsAssembly(typeof(DigitalCoachDbContext).Assembly.FullName);
+                sqlServer.EnableRetryOnFailure();
+            }));
 
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();

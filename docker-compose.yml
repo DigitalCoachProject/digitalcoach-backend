@@ -10,7 +10,7 @@ services:
       db-init:
         condition: service_completed_successfully
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: Docker
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=DigitalCoachDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Your_strong_password123};TrustServerCertificate=True;MultipleActiveResultSets=True
       Jwt__Issuer: DigitalCoach
       Jwt__Audience: DigitalCoach.Mobile
