@@ -1,0 +1,9 @@
+**/bin
+**/obj
+.git
+.vs
+.vscode
+docker-data
+logs
+appsettings.Local.json
+.env
