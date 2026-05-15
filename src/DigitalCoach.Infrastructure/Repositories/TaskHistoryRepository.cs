@@ -10,6 +10,10 @@ public sealed class TaskHistoryRepository(DigitalCoachDbContext dbContext)
 {
     public async Task<IReadOnlyList<TaskHistory>> ListByTaskAsync(int taskId, CancellationToken cancellationToken = default)
     {
-        return await DbContext.TaskHistories.AsNoTracking().Where(x => x.TaskId == taskId).ToListAsync(cancellationToken);
+        return await DbContext.TaskHistories
+            .AsNoTracking()
+            .Where(x => x.TaskId == taskId)
+            .OrderByDescending(x => x.ChangeDate)
+            .ToListAsync(cancellationToken);
     }
 }

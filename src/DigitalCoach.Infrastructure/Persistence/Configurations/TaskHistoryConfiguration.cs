@@ -8,7 +8,7 @@ public sealed class TaskHistoryConfiguration : IEntityTypeConfiguration<TaskHist
 {
     public void Configure(EntityTypeBuilder<TaskHistory> builder)
     {
-        builder.ToTable("TaskHistory");
+        builder.ToTable("TaskHistory", table => table.UseSqlOutputClause(false));
 
         builder.HasKey(x => x.Id).HasName("PK_TaskHistory");
 
