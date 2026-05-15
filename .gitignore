@@ -16,6 +16,7 @@ appsettings.Local.json
 
 docker-data/
 logs/
+src/DigitalCoach.Api/App_Data/
 
 *.db
 *.mdf

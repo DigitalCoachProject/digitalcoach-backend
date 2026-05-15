@@ -17,7 +17,7 @@ public sealed class AuthService(
         var existingUser = await userProfileRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
         if (existingUser is not null)
         {
-            return Result<AuthResponse>.Failure("User with this email already exists.");
+            return Result<AuthResponse>.Failure("User with this email already exists.", ErrorType.Conflict);
         }
 
         var user = new UserProfile
@@ -43,9 +43,30 @@ public sealed class AuthService(
         var user = await userProfileRepository.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), cancellationToken);
         if (user is null || !passwordHasher.Verify(request.Password, user.PasswordHash))
         {
-            return Result<AuthResponse>.Failure("Invalid email or password.");
+            return Result<AuthResponse>.Failure("Invalid email or password.", ErrorType.Unauthorized);
         }
 
         return Result<AuthResponse>.Success(jwtTokenService.CreateToken(user));
+    }
+
+    public async Task<Result<CurrentUserResponse>> GetCurrentUserAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var user = await userProfileRepository.GetByIdAsync(userId, cancellationToken);
+        if (user is null)
+        {
+            return Result<CurrentUserResponse>.Failure("User was not found.", ErrorType.NotFound);
+        }
+
+        var response = new CurrentUserResponse(
+            user.Id,
+            user.Email,
+            user.BirthDate,
+            user.Height,
+            user.Weight,
+            user.Gender,
+            user.CreatedAt,
+            user.UpdatedAt);
+
+        return Result<CurrentUserResponse>.Success(response);
     }
 }
