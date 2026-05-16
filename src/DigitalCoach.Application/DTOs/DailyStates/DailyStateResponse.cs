@@ -1,0 +1,28 @@
+namespace DigitalCoach.Application.DTOs.DailyStates;
+
+public sealed record DailyStateResponse(
+    int Id,
+    int UserId,
+    DateOnly Date,
+    decimal? SleepDuration,
+    int? SleepQuality,
+    int Energy,
+    int Mood,
+    int Stress,
+    int PhysicalState,
+    bool HasIllness,
+    bool HasPainOrInjury,
+    int? CaloriesIntake,
+    bool? HadMeals,
+    int? MealsCount,
+    bool? Overeating,
+    bool? Undereating,
+    string? Activity,
+    decimal? ActivityDuration,
+    bool? RestTaken,
+    decimal? ScreenTime,
+    bool? ScreenBeforeSleep,
+    string? DayType,
+    string? Notes,
+    string? ActivityType,
+    DateTime UpdatedAt);
