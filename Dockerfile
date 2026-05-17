@@ -7,7 +7,7 @@ COPY src/DigitalCoach.Application/DigitalCoach.Application.csproj src/DigitalCoa
 COPY src/DigitalCoach.Infrastructure/DigitalCoach.Infrastructure.csproj src/DigitalCoach.Infrastructure/
 COPY src/DigitalCoach.Api/DigitalCoach.Api.csproj src/DigitalCoach.Api/
 
-RUN dotnet restore DigitalCoach.sln
+RUN dotnet restore src/DigitalCoach.Api/DigitalCoach.Api.csproj
 
 COPY . .
 RUN dotnet publish src/DigitalCoach.Api/DigitalCoach.Api.csproj -c Release -o /app/publish --no-restore

@@ -1,6 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Threading.RateLimiting;
 using DigitalCoach.Api.Common;
 using DigitalCoach.Api.Middleware;
 using DigitalCoach.Api.Swagger;
@@ -12,6 +14,7 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -83,6 +86,55 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/health")
+            || context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            return RateLimitPartition.GetNoLimiter("diagnostics");
+        }
+
+        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter(
+                $"user:{userId}",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 120,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                });
+        }
+
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            $"anonymous:{ipAddress}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        var httpContext = context.HttpContext;
+        httpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        httpContext.Response.ContentType = "application/json";
+
+        var response = ApiResponse<object>.Failure("Too many requests.");
+        await JsonSerializer.SerializeAsync(
+            httpContext.Response.Body,
+            response,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web),
+            cancellationToken);
+    };
+});
 builder.Services.AddControllers();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -137,7 +189,10 @@ app.Logger.LogInformation(
     app.Environment.EnvironmentName,
     app.Environment.ContentRootPath);
 
-await ApplyDatabaseMigrationsAsync(app);
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await ApplyDatabaseMigrationsAsync(app);
+}
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -174,7 +229,9 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Docker")
     app.UseHttpsRedirection();
 }
 
+app.UseRouting();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -246,3 +303,5 @@ static string ToCamelCaseKey(string key)
 
     return string.Join('.', segments);
 }
+
+public partial class Program;

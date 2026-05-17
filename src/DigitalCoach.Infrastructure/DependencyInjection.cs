@@ -50,6 +50,11 @@ public static class DependencyInjection
         services.AddScoped<IRecommendationService, RecommendationService>();
         services.AddScoped<INotificationService, NotificationService>();
 
+        if (configuration.GetValue("BackgroundJobs:Enabled", true))
+        {
+            services.AddHostedService<RecommendationNotificationBackgroundService>();
+        }
+
         return services;
     }
 }
