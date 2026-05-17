@@ -92,7 +92,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
         var errors = context.ModelState
             .Where(x => x.Value?.Errors.Count > 0)
             .ToDictionary(
-                x => x.Key,
+                x => ToCamelCaseKey(x.Key),
                 x => x.Value!.Errors.Select(error => error.ErrorMessage).ToArray());
 
         return new BadRequestObjectResult(ApiResponse<object>.Failure("Validation failed.", errors));
@@ -127,6 +127,7 @@ builder.Services.AddSwaggerGen(options =>
     options.AddSecurityDefinition("Bearer", securityScheme);
     options.OperationFilter<AuthorizeOperationFilter>();
     options.OperationFilter<PaginationQueryParameterOperationFilter>();
+    options.OperationFilter<ModuleOperationFilter>();
 });
 
 var app = builder.Build();
@@ -138,7 +139,29 @@ app.Logger.LogInformation(
 
 await ApplyDatabaseMigrationsAsync(app);
 
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseStatusCodePages(async statusCodeContext =>
+{
+    var httpContext = statusCodeContext.HttpContext;
+    if (httpContext.Response.HasStarted || httpContext.Response.StatusCode < StatusCodes.Status400BadRequest)
+    {
+        return;
+    }
+
+    httpContext.Response.ContentType = "application/json";
+    var message = httpContext.Response.StatusCode switch
+    {
+        StatusCodes.Status404NotFound => "The requested endpoint was not found.",
+        StatusCodes.Status405MethodNotAllowed => "The HTTP method is not allowed for this endpoint.",
+        _ => "The request could not be processed."
+    };
+
+    var response = ApiResponse<object>.Failure(message);
+    await JsonSerializer.SerializeAsync(httpContext.Response.Body, response, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+});
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
@@ -182,10 +205,11 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         catch (Exception exception) when (attempt < maxAttempts)
         {
             app.Logger.LogWarning(
-                exception,
-                "Database migration attempt {Attempt}/{MaxAttempts} failed. Retrying in {DelaySeconds} seconds.",
+                "Database migration attempt {Attempt}/{MaxAttempts} failed with {ExceptionType}: {ExceptionMessage}. Retrying in {DelaySeconds} seconds.",
                 attempt,
                 maxAttempts,
+                exception.GetType().Name,
+                exception.Message,
                 delay.TotalSeconds);
 
             await Task.Delay(delay);
@@ -199,4 +223,26 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
             throw;
         }
     }
+}
+
+static string ToCamelCaseKey(string key)
+{
+    if (string.IsNullOrWhiteSpace(key) || key == "$")
+    {
+        return key;
+    }
+
+    var segments = key.Split('.');
+    for (var i = 0; i < segments.Length; i++)
+    {
+        var segment = segments[i];
+        if (string.IsNullOrWhiteSpace(segment) || !char.IsUpper(segment[0]))
+        {
+            continue;
+        }
+
+        segments[i] = char.ToLowerInvariant(segment[0]) + segment[1..];
+    }
+
+    return string.Join('.', segments);
 }

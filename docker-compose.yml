@@ -8,6 +8,12 @@ services:
       sqlserver:
         condition: service_healthy
     environment:
+      # Override these values in a local .env file for production-like runs.
+      # Example:
+      # MSSQL_SA_PASSWORD=replace_with_a_strong_sql_password
+      # JWT_KEY=replace_with_a_long_random_secret_at_least_32_bytes
+      # JWT_ISSUER=DigitalCoach
+      # JWT_AUDIENCE=DigitalCoach.Mobile
       ASPNETCORE_ENVIRONMENT: Docker
       ASPNETCORE_HTTP_PORTS: 8080
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=DigitalCoachDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Your_strong_password123};TrustServerCertificate=True;MultipleActiveResultSets=True
@@ -20,7 +26,7 @@ services:
     volumes:
       - api-data-protection:/app/App_Data
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080; printf \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200 OK\" <&3'"]
       interval: 15s
       timeout: 5s
       retries: 10
