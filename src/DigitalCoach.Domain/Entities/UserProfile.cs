@@ -16,4 +16,5 @@ public sealed class UserProfile
     public ICollection<UserTask> Tasks { get; set; } = [];
     public ICollection<DailyState> DailyStates { get; set; } = [];
     public ICollection<Recommendation> Recommendations { get; set; } = [];
+    public ICollection<Notification> Notifications { get; set; } = [];
 }

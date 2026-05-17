@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IProductivityOverviewRepository, ProductivityOverviewRepository>();
         services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
         services.AddScoped<IRecommendationRepository, RecommendationRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -44,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<IDailyStateService, DailyStateService>();
         services.AddScoped<IAnalyticsService, AnalyticsService>();
         services.AddScoped<IRecommendationService, RecommendationService>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         return services;
     }

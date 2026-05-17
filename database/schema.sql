@@ -386,6 +386,61 @@ CREATE TABLE Recommendation (
 GO
 
 -- =========================================================
+-- NOTIFICATION
+-- =========================================================
+
+CREATE TABLE Notification (
+    id INT IDENTITY(1,1) NOT NULL,
+
+    user_id INT NOT NULL,
+
+    type NVARCHAR(30) NOT NULL,
+
+    title NVARCHAR(150) NOT NULL,
+
+    message NVARCHAR(1000) NOT NULL,
+
+    priority INT NOT NULL,
+
+    is_read BIT NOT NULL
+        CONSTRAINT DF_Notification_is_read
+        DEFAULT 0,
+
+    created_at DATETIME2 NOT NULL
+        CONSTRAINT DF_Notification_created_at
+        DEFAULT SYSUTCDATETIME(),
+
+    scheduled_for DATETIME2 NULL,
+
+    read_at DATETIME2 NULL,
+
+    expires_at DATETIME2 NULL,
+
+    CONSTRAINT PK_Notification
+        PRIMARY KEY (id),
+
+    CONSTRAINT FK_Notification_UserProfile
+        FOREIGN KEY (user_id)
+        REFERENCES UserProfile(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT CK_Notification_priority
+        CHECK (priority BETWEEN 1 AND 5),
+
+    CONSTRAINT CK_Notification_type
+        CHECK (type IN (
+            'habit',
+            'task',
+            'wellness',
+            'recommendation',
+            'burnout',
+            'reminder',
+            'system'
+        ))
+);
+GO
+
+-- =========================================================
 -- INDEXES
 -- =========================================================
 
@@ -419,6 +474,18 @@ GO
 
 CREATE INDEX IX_Recommendation_user_type_created_at
 ON Recommendation(user_id, type, created_at);
+GO
+
+CREATE INDEX IX_Notification_user_id
+ON Notification(user_id);
+GO
+
+CREATE INDEX IX_Notification_user_is_read_created_at
+ON Notification(user_id, is_read, created_at);
+GO
+
+CREATE INDEX IX_Notification_user_type_created_at
+ON Notification(user_id, type, created_at);
 GO
 
 -- =========================================================
