@@ -11,10 +11,23 @@ public sealed class RecommendationService(
     IRecommendationRepository recommendationRepository,
     IAnalyticsRepository analyticsRepository) : IRecommendationService
 {
-    public async Task<Result<IReadOnlyList<RecommendationResponse>>> ListAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<Result<PaginatedResponse<RecommendationResponse>>> ListAsync(int userId, RecommendationQueryRequest request, CancellationToken cancellationToken = default)
     {
-        var recommendations = await recommendationRepository.ListByUserAsync(userId, cancellationToken);
-        return Result<IReadOnlyList<RecommendationResponse>>.Success(recommendations.Select(ToResponse).ToList());
+        var page = await recommendationRepository.ListByUserAsync(
+            userId,
+            request.SortBy,
+            request.SortDescending,
+            request.Page,
+            request.PageSize,
+            cancellationToken);
+
+        var response = PaginatedResponse<RecommendationResponse>.Create(
+            page.Items.Select(ToResponse).ToList(),
+            page.Page,
+            page.PageSize,
+            page.TotalItems);
+
+        return Result<PaginatedResponse<RecommendationResponse>>.Success(response);
     }
 
     public async Task<Result<IReadOnlyList<RecommendationResponse>>> GenerateAsync(int userId, CancellationToken cancellationToken = default)

@@ -35,17 +35,27 @@ public sealed class HabitService(
         return Result<HabitResponse>.Success(ToResponse(habit));
     }
 
-    public async Task<Result<IReadOnlyList<HabitResponse>>> ListAsync(int userId, HabitFilterRequest filter, CancellationToken cancellationToken = default)
+    public async Task<Result<PaginatedResponse<HabitResponse>>> ListAsync(int userId, HabitFilterRequest filter, CancellationToken cancellationToken = default)
     {
-        var habits = await habitRepository.ListByUserAsync(
+        var page = await habitRepository.ListByUserAsync(
             userId,
             filter.Type,
             filter.IsActive,
             filter.StartDateFrom,
             filter.StartDateTo,
+            filter.SortBy,
+            filter.SortDescending,
+            filter.Page,
+            filter.PageSize,
             cancellationToken);
 
-        return Result<IReadOnlyList<HabitResponse>>.Success(habits.Select(ToResponse).ToList());
+        var response = PaginatedResponse<HabitResponse>.Create(
+            page.Items.Select(ToResponse).ToList(),
+            page.Page,
+            page.PageSize,
+            page.TotalItems);
+
+        return Result<PaginatedResponse<HabitResponse>>.Success(response);
     }
 
     public async Task<Result<HabitResponse>> GetByIdAsync(int userId, int habitId, CancellationToken cancellationToken = default)

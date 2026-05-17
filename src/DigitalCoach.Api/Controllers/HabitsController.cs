@@ -37,7 +37,7 @@ public sealed class HabitsController(IHabitService habitService) : ControllerBas
 
         var result = await habitService.ListAsync(userId, filter, cancellationToken);
         return result.Succeeded
-            ? Ok(ApiResponse<IReadOnlyList<HabitResponse>>.Success(result.Value!))
+            ? Ok(ApiResponse<PaginatedResponse<HabitResponse>>.Success(result.Value!))
             : ToErrorResponse(result);
     }
 

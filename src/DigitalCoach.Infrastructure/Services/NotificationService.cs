@@ -12,10 +12,23 @@ public sealed class NotificationService(
     IAnalyticsRepository analyticsRepository,
     IRecommendationRepository recommendationRepository) : INotificationService
 {
-    public async Task<Result<IReadOnlyList<NotificationResponse>>> ListAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<Result<PaginatedResponse<NotificationResponse>>> ListAsync(int userId, NotificationQueryRequest request, CancellationToken cancellationToken = default)
     {
-        var notifications = await notificationRepository.ListByUserAsync(userId, cancellationToken);
-        return Result<IReadOnlyList<NotificationResponse>>.Success(notifications.Select(ToResponse).ToList());
+        var page = await notificationRepository.ListByUserAsync(
+            userId,
+            request.SortBy,
+            request.SortDescending,
+            request.Page,
+            request.PageSize,
+            cancellationToken);
+
+        var response = PaginatedResponse<NotificationResponse>.Create(
+            page.Items.Select(ToResponse).ToList(),
+            page.Page,
+            page.PageSize,
+            page.TotalItems);
+
+        return Result<PaginatedResponse<NotificationResponse>>.Success(response);
     }
 
     public async Task<Result<UnreadNotificationCountResponse>> GetUnreadCountAsync(int userId, CancellationToken cancellationToken = default)

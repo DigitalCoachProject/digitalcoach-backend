@@ -37,7 +37,7 @@ public sealed class TasksController(ITaskService taskService) : ControllerBase
 
         var result = await taskService.ListAsync(userId, filter, cancellationToken);
         return result.Succeeded
-            ? Ok(ApiResponse<IReadOnlyList<TaskResponse>>.Success(result.Value!))
+            ? Ok(ApiResponse<PaginatedResponse<TaskResponse>>.Success(result.Value!))
             : ToErrorResponse(result);
     }
 

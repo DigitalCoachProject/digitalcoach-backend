@@ -102,6 +102,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+    options.DescribeAllParametersInCamelCase();
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "DigitalCoach API",
@@ -125,6 +126,7 @@ builder.Services.AddSwaggerGen(options =>
 
     options.AddSecurityDefinition("Bearer", securityScheme);
     options.OperationFilter<AuthorizeOperationFilter>();
+    options.OperationFilter<PaginationQueryParameterOperationFilter>();
 });
 
 var app = builder.Build();

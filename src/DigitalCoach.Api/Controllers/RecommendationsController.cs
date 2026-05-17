@@ -14,16 +14,16 @@ namespace DigitalCoach.Api.Controllers;
 public sealed class RecommendationsController(IRecommendationService recommendationService) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get(CancellationToken cancellationToken)
+    public async Task<IActionResult> Get([FromQuery] RecommendationQueryRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
             return Unauthorized(ApiResponse<object>.Failure("Invalid authentication token."));
         }
 
-        var result = await recommendationService.ListAsync(userId, cancellationToken);
+        var result = await recommendationService.ListAsync(userId, request, cancellationToken);
         return result.Succeeded
-            ? Ok(ApiResponse<IReadOnlyList<RecommendationResponse>>.Success(result.Value!))
+            ? Ok(ApiResponse<PaginatedResponse<RecommendationResponse>>.Success(result.Value!))
             : ToErrorResponse(result);
     }
 

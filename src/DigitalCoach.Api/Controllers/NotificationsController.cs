@@ -14,16 +14,16 @@ namespace DigitalCoach.Api.Controllers;
 public sealed class NotificationsController(INotificationService notificationService) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get(CancellationToken cancellationToken)
+    public async Task<IActionResult> Get([FromQuery] NotificationQueryRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
             return Unauthorized(ApiResponse<object>.Failure("Invalid authentication token."));
         }
 
-        var result = await notificationService.ListAsync(userId, cancellationToken);
+        var result = await notificationService.ListAsync(userId, request, cancellationToken);
         return result.Succeeded
-            ? Ok(ApiResponse<IReadOnlyList<NotificationResponse>>.Success(result.Value!))
+            ? Ok(ApiResponse<PaginatedResponse<NotificationResponse>>.Success(result.Value!))
             : ToErrorResponse(result);
     }
 

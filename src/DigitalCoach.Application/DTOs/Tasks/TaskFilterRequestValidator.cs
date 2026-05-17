@@ -1,11 +1,12 @@
 using DigitalCoach.Domain.Constants;
+using DigitalCoach.Application.Common;
 using FluentValidation;
 
 namespace DigitalCoach.Application.DTOs.Tasks;
 
-public sealed class TaskFilterRequestValidator : AbstractValidator<TaskFilterRequest>
+public sealed class TaskFilterRequestValidator : PaginationRequestValidator<TaskFilterRequest>
 {
-    private static readonly string[] SortFields = ["planned_date", "deadline"];
+    private static readonly string[] SortFields = ["created_at", "planned_date", "deadline", "priority", "difficulty"];
 
     public TaskFilterRequestValidator()
     {

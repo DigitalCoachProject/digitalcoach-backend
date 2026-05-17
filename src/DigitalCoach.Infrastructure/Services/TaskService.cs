@@ -36,9 +36,9 @@ public sealed class TaskService(
         return Result<TaskResponse>.Success(ToResponse(task));
     }
 
-    public async Task<Result<IReadOnlyList<TaskResponse>>> ListAsync(int userId, TaskFilterRequest filter, CancellationToken cancellationToken = default)
+    public async Task<Result<PaginatedResponse<TaskResponse>>> ListAsync(int userId, TaskFilterRequest filter, CancellationToken cancellationToken = default)
     {
-        var tasks = await taskRepository.ListByUserAsync(
+        var page = await taskRepository.ListByUserAsync(
             userId,
             filter.Status,
             filter.Priority,
@@ -48,9 +48,17 @@ public sealed class TaskService(
             filter.SortBy,
             filter.SortDescending,
             DateOnly.FromDateTime(DateTime.UtcNow),
+            filter.Page,
+            filter.PageSize,
             cancellationToken);
 
-        return Result<IReadOnlyList<TaskResponse>>.Success(tasks.Select(ToResponse).ToList());
+        var response = PaginatedResponse<TaskResponse>.Create(
+            page.Items.Select(ToResponse).ToList(),
+            page.Page,
+            page.PageSize,
+            page.TotalItems);
+
+        return Result<PaginatedResponse<TaskResponse>>.Success(response);
     }
 
     public async Task<Result<TaskResponse>> GetByIdAsync(int userId, int taskId, CancellationToken cancellationToken = default)
