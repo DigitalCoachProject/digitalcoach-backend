@@ -15,8 +15,11 @@ public static class DependencyInjection
     {
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
+        }
 
         services.AddDbContext<DigitalCoachDbContext>(options =>
             options.UseSqlServer(connectionString, sqlServer =>

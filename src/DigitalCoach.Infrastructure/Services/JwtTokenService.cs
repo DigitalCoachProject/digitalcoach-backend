@@ -16,7 +16,7 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options) : IJwtTokenSer
     public AuthResponse CreateToken(UserProfile user)
     {
         var expiresAt = DateTime.UtcNow.AddMinutes(_options.ExpiresMinutes);
-        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
         Claim[] claims =

@@ -7,17 +7,24 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
-      db-init:
-        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_HTTP_PORTS: 8080
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=DigitalCoachDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Your_strong_password123};TrustServerCertificate=True;MultipleActiveResultSets=True
-      Jwt__Issuer: DigitalCoach
-      Jwt__Audience: DigitalCoach.Mobile
-      Jwt__SecretKey: ${JWT_SECRET:-CHANGE_ME_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS}
+      Jwt__Key: ${JWT_KEY:-CHANGE_ME_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS}
+      Jwt__Issuer: ${JWT_ISSUER:-DigitalCoach}
+      Jwt__Audience: ${JWT_AUDIENCE:-DigitalCoach.Mobile}
       Jwt__ExpiresMinutes: 120
     ports:
-      - "8080:8080"
+      - "5050:8080"
+    volumes:
+      - api-data-protection:/app/App_Data
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     restart: unless-stopped
 
   sqlserver:
@@ -28,37 +35,29 @@ services:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Your_strong_password123}
       MSSQL_PID: Developer
     ports:
-      - "1433:1433"
+      - "1435:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${MSSQL_SA_PASSWORD:-Your_strong_password123} -C -Q \"SELECT 1\" || exit 1"]
+      test: ["CMD-SHELL", "SQLCMD=/opt/mssql-tools18/bin/sqlcmd; if [ ! -x $$SQLCMD ]; then SQLCMD=/opt/mssql-tools/bin/sqlcmd; fi; $$SQLCMD -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" -b -o /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 20
+      retries: 30
+      start_period: 30s
     restart: unless-stopped
-
-  db-init:
-    image: mcr.microsoft.com/mssql-tools
-    container_name: digitalcoach-db-init
-    depends_on:
-      sqlserver:
-        condition: service_healthy
-    volumes:
-      - ./database/schema.sql:/schema/schema.sql:ro
-    command: /bin/bash -c "if /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P ${MSSQL_SA_PASSWORD:-Your_strong_password123} -Q \"SELECT name FROM sys.databases WHERE name = 'DigitalCoachDb'\" | grep -q DigitalCoachDb; then echo 'DigitalCoachDb already exists'; else /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P ${MSSQL_SA_PASSWORD:-Your_strong_password123} -i /schema/schema.sql; fi"
-    restart: "no"
 
   nginx:
     image: nginx:1.27-alpine
     container_name: digitalcoach-nginx
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
-      - "80:80"
+      - "8085:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
 
 volumes:
+  api-data-protection:
   sqlserver-data:

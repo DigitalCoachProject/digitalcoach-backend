@@ -6,11 +6,13 @@ using DigitalCoach.Api.Middleware;
 using DigitalCoach.Api.Swagger;
 using DigitalCoach.Application;
 using DigitalCoach.Infrastructure;
+using DigitalCoach.Infrastructure.Persistence.Context;
 using DigitalCoach.Infrastructure.Services;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -37,9 +39,9 @@ builder.Services.AddHttpsRedirection(options =>
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("JWT configuration section is missing.");
 
-if (string.IsNullOrWhiteSpace(jwtOptions.SecretKey) || Encoding.UTF8.GetByteCount(jwtOptions.SecretKey) < 32)
+if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey) || Encoding.UTF8.GetByteCount(jwtOptions.SigningKey) < 32)
 {
-    throw new InvalidOperationException("JWT SecretKey must contain at least 32 bytes.");
+    throw new InvalidOperationException("JWT signing key must contain at least 32 bytes. Configure Jwt__Key or Jwt__SecretKey.");
 }
 
 builder.Services
@@ -55,7 +57,7 @@ builder.Services
             ClockSkew = TimeSpan.FromMinutes(1),
             ValidIssuer = jwtOptions.Issuer,
             ValidAudience = jwtOptions.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
             NameClaimType = JwtRegisteredClaimNames.Email
         };
         options.Events = new JwtBearerEvents
@@ -127,6 +129,13 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.Logger.LogInformation(
+    "DigitalCoach API starting. Environment: {EnvironmentName}. ContentRoot: {ContentRoot}.",
+    app.Environment.EnvironmentName,
+    app.Environment.ContentRootPath);
+
+await ApplyDatabaseMigrationsAsync(app);
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
@@ -146,3 +155,46 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
+{
+    const int maxAttempts = 12;
+    var delay = TimeSpan.FromSeconds(5);
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<DigitalCoachDbContext>();
+            var configuredMigrations = dbContext.Database.GetMigrations().ToList();
+
+            app.Logger.LogInformation(
+                "Checking database and applying pending EF Core migrations. Configured migrations: {Migrations}",
+                configuredMigrations.Count == 0 ? "(none)" : string.Join(", ", configuredMigrations));
+
+            await dbContext.Database.MigrateAsync();
+            app.Logger.LogInformation("Database migration check completed successfully.");
+            return;
+        }
+        catch (Exception exception) when (attempt < maxAttempts)
+        {
+            app.Logger.LogWarning(
+                exception,
+                "Database migration attempt {Attempt}/{MaxAttempts} failed. Retrying in {DelaySeconds} seconds.",
+                attempt,
+                maxAttempts,
+                delay.TotalSeconds);
+
+            await Task.Delay(delay);
+        }
+        catch (Exception exception)
+        {
+            app.Logger.LogCritical(
+                exception,
+                "Database migration failed after {MaxAttempts} attempts. API startup cannot continue safely.",
+                maxAttempts);
+            throw;
+        }
+    }
+}

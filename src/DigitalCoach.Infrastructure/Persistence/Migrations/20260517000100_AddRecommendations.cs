@@ -1,4 +1,6 @@
 using System;
+using DigitalCoach.Infrastructure.Persistence.Context;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,6 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DigitalCoach.Infrastructure.Persistence.Migrations;
 
 [Migration("20260517000100_AddRecommendations")]
+[DbContext(typeof(DigitalCoachDbContext))]
 public partial class AddRecommendations : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
