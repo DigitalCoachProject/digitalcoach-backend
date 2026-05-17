@@ -12,6 +12,7 @@ public sealed class DigitalCoachDbContext(DbContextOptions<DigitalCoachDbContext
     public DbSet<UserTask> Tasks => Set<UserTask>();
     public DbSet<TaskHistory> TaskHistories => Set<TaskHistory>();
     public DbSet<DailyState> DailyStates => Set<DailyState>();
+    public DbSet<Recommendation> Recommendations => Set<Recommendation>();
     public DbSet<ProductivityOverview> ProductivityOverview => Set<ProductivityOverview>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

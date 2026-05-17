@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IDailyStateRepository, DailyStateRepository>();
         services.AddScoped<IProductivityOverviewRepository, ProductivityOverviewRepository>();
         services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
+        services.AddScoped<IRecommendationRepository, RecommendationRepository>();
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();

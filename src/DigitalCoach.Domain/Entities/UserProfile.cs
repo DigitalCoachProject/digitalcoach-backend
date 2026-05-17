@@ -15,4 +15,5 @@ public sealed class UserProfile
     public ICollection<Habit> Habits { get; set; } = [];
     public ICollection<UserTask> Tasks { get; set; } = [];
     public ICollection<DailyState> DailyStates { get; set; } = [];
+    public ICollection<Recommendation> Recommendations { get; set; } = [];
 }

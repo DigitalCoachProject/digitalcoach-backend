@@ -335,6 +335,57 @@ CREATE TABLE DailyState (
 GO
 
 -- =========================================================
+-- RECOMMENDATION
+-- =========================================================
+
+CREATE TABLE Recommendation (
+    id INT IDENTITY(1,1) NOT NULL,
+
+    user_id INT NOT NULL,
+
+    type NVARCHAR(30) NOT NULL,
+
+    title NVARCHAR(150) NOT NULL,
+
+    message NVARCHAR(1000) NOT NULL,
+
+    priority INT NOT NULL,
+
+    is_read BIT NOT NULL
+        CONSTRAINT DF_Recommendation_is_read
+        DEFAULT 0,
+
+    created_at DATETIME2 NOT NULL
+        CONSTRAINT DF_Recommendation_created_at
+        DEFAULT SYSUTCDATETIME(),
+
+    expires_at DATETIME2 NULL,
+
+    CONSTRAINT PK_Recommendation
+        PRIMARY KEY (id),
+
+    CONSTRAINT FK_Recommendation_UserProfile
+        FOREIGN KEY (user_id)
+        REFERENCES UserProfile(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT CK_Recommendation_priority
+        CHECK (priority BETWEEN 1 AND 5),
+
+    CONSTRAINT CK_Recommendation_type
+        CHECK (type IN (
+            'productivity',
+            'wellness',
+            'habit',
+            'task',
+            'burnout',
+            'sleep',
+            'motivation'
+        ))
+);
+GO
+
+-- =========================================================
 -- INDEXES
 -- =========================================================
 
@@ -360,6 +411,14 @@ GO
 
 CREATE INDEX IX_TaskHistory_task_id
 ON TaskHistory(task_id);
+GO
+
+CREATE INDEX IX_Recommendation_user_id
+ON Recommendation(user_id);
+GO
+
+CREATE INDEX IX_Recommendation_user_type_created_at
+ON Recommendation(user_id, type, created_at);
 GO
 
 -- =========================================================
