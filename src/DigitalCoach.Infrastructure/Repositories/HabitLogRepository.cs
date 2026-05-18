@@ -39,4 +39,10 @@ public sealed class HabitLogRepository(DigitalCoachDbContext dbContext)
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.HabitId == habitId && x.Date == date, cancellationToken);
     }
+
+    public Task<HabitLog?> GetTrackedByHabitAndDateAsync(int habitId, DateOnly date, CancellationToken cancellationToken = default)
+    {
+        return DbContext.HabitLogs
+            .FirstOrDefaultAsync(x => x.HabitId == habitId && x.Date == date, cancellationToken);
+    }
 }

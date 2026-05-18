@@ -11,4 +11,6 @@ public interface IHabitLogRepository : IRepository<HabitLog>
         CancellationToken cancellationToken = default);
 
     Task<HabitLog?> GetByHabitAndDateAsync(int habitId, DateOnly date, CancellationToken cancellationToken = default);
+
+    Task<HabitLog?> GetTrackedByHabitAndDateAsync(int habitId, DateOnly date, CancellationToken cancellationToken = default);
 }

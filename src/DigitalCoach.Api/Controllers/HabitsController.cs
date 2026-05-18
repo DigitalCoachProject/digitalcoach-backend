@@ -97,6 +97,34 @@ public sealed class HabitsController(IHabitService habitService) : ControllerBas
             : ToErrorResponse(result);
     }
 
+    [HttpPut("{id:int}/log")]
+    public async Task<IActionResult> UpsertLog(int id, CreateHabitLogRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.Failure("Invalid authentication token."));
+        }
+
+        var result = await habitService.UpsertLogAsync(userId, id, request, cancellationToken);
+        return result.Succeeded
+            ? Ok(ApiResponse<HabitLogResponse>.Success(result.Value!))
+            : ToErrorResponse(result);
+    }
+
+    [HttpDelete("{id:int}/log")]
+    public async Task<IActionResult> DeleteLog(int id, [FromQuery] DateOnly date, CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.Failure("Invalid authentication token."));
+        }
+
+        var result = await habitService.DeleteLogAsync(userId, id, date, cancellationToken);
+        return result.Succeeded
+            ? NoContent()
+            : ToErrorResponse(result);
+    }
+
     [HttpGet("{id:int}/logs")]
     public async Task<IActionResult> GetLogs(int id, [FromQuery] HabitLogFilterRequest filter, CancellationToken cancellationToken)
     {

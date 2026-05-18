@@ -107,39 +107,77 @@ public sealed class HabitService(
 
     public async Task<Result<HabitLogResponse>> CreateLogAsync(int userId, int habitId, CreateHabitLogRequest request, CancellationToken cancellationToken = default)
     {
+        return await UpsertLogAsync(userId, habitId, request, cancellationToken);
+    }
+
+    public async Task<Result<HabitLogResponse>> UpsertLogAsync(int userId, int habitId, CreateHabitLogRequest request, CancellationToken cancellationToken = default)
+    {
         var habitResult = await GetOwnedHabitAsync(userId, habitId, cancellationToken);
         if (!habitResult.Succeeded)
         {
             return Result<HabitLogResponse>.Failure(habitResult.Error!, habitResult.ErrorType);
         }
 
-        var existingLog = await habitLogRepository.GetByHabitAndDateAsync(habitId, request.Date, cancellationToken);
-        if (existingLog is not null)
+        var existingLog = await habitLogRepository.GetTrackedByHabitAndDateAsync(habitId, request.Date, cancellationToken);
+        if (existingLog is null)
         {
-            return Result<HabitLogResponse>.Failure("A log already exists for this habit and date.", ErrorType.Conflict);
+            var log = new HabitLog
+            {
+                HabitId = habitId,
+                Date = request.Date,
+                Status = request.Status,
+                Reason = TrimToNull(request.Reason),
+                Comment = TrimToNull(request.Comment)
+            };
+
+            await habitLogRepository.AddAsync(log, cancellationToken);
+
+            try
+            {
+                await habitLogRepository.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            {
+                existingLog = await habitLogRepository.GetTrackedByHabitAndDateAsync(habitId, request.Date, cancellationToken);
+                if (existingLog is null)
+                {
+                    return Result<HabitLogResponse>.Failure("A log already exists for this habit and date.", ErrorType.Conflict);
+                }
+            }
+
+            if (existingLog is null)
+            {
+                return Result<HabitLogResponse>.Success(ToResponse(log));
+            }
         }
 
-        var log = new HabitLog
-        {
-            HabitId = habitId,
-            Date = request.Date,
-            Status = request.Status,
-            Reason = TrimToNull(request.Reason),
-            Comment = TrimToNull(request.Comment)
-        };
+        existingLog!.Status = request.Status;
+        existingLog.Reason = TrimToNull(request.Reason);
+        existingLog.Comment = TrimToNull(request.Comment);
 
-        await habitLogRepository.AddAsync(log, cancellationToken);
+        habitLogRepository.Update(existingLog);
+        await habitLogRepository.SaveChangesAsync(cancellationToken);
 
-        try
+        return Result<HabitLogResponse>.Success(ToResponse(existingLog));
+    }
+
+    public async Task<Result> DeleteLogAsync(int userId, int habitId, DateOnly date, CancellationToken cancellationToken = default)
+    {
+        var habitResult = await GetOwnedHabitAsync(userId, habitId, cancellationToken);
+        if (!habitResult.Succeeded)
         {
-            await habitLogRepository.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
-        {
-            return Result<HabitLogResponse>.Failure("A log already exists for this habit and date.", ErrorType.Conflict);
+            return Result.Failure(habitResult.Error!, habitResult.ErrorType);
         }
 
-        return Result<HabitLogResponse>.Success(ToResponse(log));
+        var existingLog = await habitLogRepository.GetTrackedByHabitAndDateAsync(habitId, date, cancellationToken);
+        if (existingLog is null)
+        {
+            return Result.Success();
+        }
+
+        habitLogRepository.Remove(existingLog);
+        await habitLogRepository.SaveChangesAsync(cancellationToken);
+        return Result.Success();
     }
 
     public async Task<Result<IReadOnlyList<HabitLogResponse>>> ListLogsAsync(int userId, int habitId, HabitLogFilterRequest filter, CancellationToken cancellationToken = default)
